@@ -1,5 +1,7 @@
 package com.axalotl.async.mixin.entity;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
@@ -8,9 +10,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,20 +22,24 @@ public abstract class ItemEntityMixin extends Entity {
         super(type, world);
     }
 
-    @Inject(method = "tryMerge()V", at = @At(value = "HEAD"))
-    private void lock(CallbackInfo ci) {
-        lock.lock();
-    }
-
-    @Inject(method = "tryMerge()V", at = @At(value = "RETURN"))
-    private void unlock(CallbackInfo ci) {
-        lock.unlock();
+    @WrapMethod(method = "tryMerge()V")
+    private void unlock(Operation<Void> original) {
+        synchronized (lock) {
+            original.call();
+        }
     }
 
     @Override
-    public void move(MovementType movementType, Vec3d movement) {
+    public void move(MovementType type, Vec3d movement) {
         synchronized (lock) {
-            super.move(movementType, movement);
+            super.move(type, movement);
+        }
+    }
+
+    @Override
+    public void tickBlockCollision() {
+        synchronized (lock) {
+            super.tickBlockCollision();
         }
     }
 }
