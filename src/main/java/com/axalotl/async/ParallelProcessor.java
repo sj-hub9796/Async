@@ -27,7 +27,7 @@ public class ParallelProcessor {
     public static AtomicInteger currentEntities = new AtomicInteger();
     private static final AtomicInteger ThreadPoolID = new AtomicInteger();
     private static ExecutorService tickPool;
-    private static final Queue<CompletableFuture<Void>> taskQueue = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentHashMap<UUID, CompletableFuture<Void>> taskMap = new ConcurrentHashMap<>();
     public static final Set<UUID> blacklistedEntity = ConcurrentHashMap.newKeySet();
     private static final Map<String, Set<Thread>> mcThreadTracker = new ConcurrentHashMap<>();
     public static final Set<Class<?>> specialEntities = Set.of(
@@ -65,6 +65,7 @@ public class ParallelProcessor {
         if (shouldTickSynchronously(entity)) {
             tickSynchronously(tickConsumer, entity);
         } else {
+            UUID uuid = entity.getUuid();
             CompletableFuture<Void> future = CompletableFuture.runAsync(
                     () -> performAsyncEntityTick(tickConsumer, entity),
                     tickPool
@@ -73,8 +74,8 @@ public class ParallelProcessor {
                 tickSynchronously(tickConsumer, entity);
                 blacklistedEntity.add(entity.getUuid());
                 return null;
-            });
-            taskQueue.add(future);
+            }).whenComplete((result, error) -> taskMap.remove(uuid));
+            taskMap.put(uuid, future);
         }
     }
 
@@ -119,7 +120,7 @@ public class ParallelProcessor {
     public static void postEntityTick() {
         if (!AsyncConfig.disabled) {
             try {
-                List<CompletableFuture<Void>> futuresList = new ArrayList<>(taskQueue);
+                List<CompletableFuture<Void>> futuresList = new ArrayList<>(taskMap.values());
                 CompletableFuture<Void> allTasks = CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]));
                 server.getWorlds().forEach(world -> {
                     world.getChunkManager().executeQueuedTasks();
@@ -128,8 +129,6 @@ public class ParallelProcessor {
             } catch (CompletionException e) {
                 LOGGER.error("Critical error during entity tick processing", e);
                 server.shutdown();
-            } finally {
-                taskQueue.clear();
             }
         }
     }
