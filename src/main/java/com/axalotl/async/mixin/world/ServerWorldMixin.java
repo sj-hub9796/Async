@@ -21,17 +21,18 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-@Mixin(ServerWorld.class)
+@Mixin(value = ServerWorld.class)
 public abstract class ServerWorldMixin implements StructureWorldAccess {
     @Unique
     ConcurrentLinkedQueue<BlockEvent> syncedBlockEventQueue;
     @Shadow
     @Final
     @Mutable
-    Set<MobEntity> loadedMobs = ConcurrentCollections.newHashSet();
+    Set<MobEntity> loadedMobs;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init(CallbackInfo ci) {
+        loadedMobs = ConcurrentCollections.newHashSet();
         syncedBlockEventQueue = new ConcurrentLinkedQueue<>();
     }
 
@@ -67,6 +68,5 @@ public abstract class ServerWorldMixin implements StructureWorldAccess {
 
     @Redirect(method = "updateListeners", at = @At(value = "FIELD", target = "Lnet/minecraft/server/world/ServerWorld;duringListenerUpdate:Z", opcode = Opcodes.PUTFIELD))
     private void skipSendBlockUpdatedCheck(ServerWorld instance, boolean value) {
-
     }
 }
