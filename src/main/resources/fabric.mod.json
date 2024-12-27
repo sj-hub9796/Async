@@ -45,7 +45,6 @@
   "suggests": {
   },
   "breaks": {
-    "sepals": "*",
     "moonrise": "*"
   }
 }
