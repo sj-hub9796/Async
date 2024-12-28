@@ -15,11 +15,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
-@Mixin(NearestItemsSensor.class)
+@Mixin(value = NearestItemsSensor.class, priority = 1500)
 public class NearestItemsSensorMixin {
 
-    @Redirect(method = "sense(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/mob/MobEntity;)V",
-            at = @At(value = "INVOKE", target = "Ljava/util/Comparator;comparingDouble(Ljava/util/function/ToDoubleFunction;)Ljava/util/Comparator;"))
+    @Redirect(method = "sense(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/mob/MobEntity;)V", at = @At(value = "INVOKE", target = "Ljava/util/Comparator;comparingDouble(Ljava/util/function/ToDoubleFunction;)Ljava/util/Comparator;"))
     private Comparator<ItemEntity> sense(ToDoubleFunction<? super ItemEntity> keyExtractor, ServerWorld world, MobEntity entity) {
         Map<ItemEntity, Vec3d> positionCache = new HashMap<>();
         return (item1, item2) -> {

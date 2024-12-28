@@ -14,8 +14,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
-@Mixin(NearestLivingEntitiesSensor.class)
-public class NearestLivingEntitiesSensorMixin{
+@Mixin(value = NearestLivingEntitiesSensor.class, priority = 1500)
+public class NearestLivingEntitiesSensorMixin {
 
     @Redirect(method = "sense", at = @At(value = "INVOKE", target = "Ljava/util/Comparator;comparingDouble(Ljava/util/function/ToDoubleFunction;)Ljava/util/Comparator;"))
     private Comparator<LivingEntity> sense(ToDoubleFunction<? super LivingEntity> keyExtractor, ServerWorld world, LivingEntity entity) {
