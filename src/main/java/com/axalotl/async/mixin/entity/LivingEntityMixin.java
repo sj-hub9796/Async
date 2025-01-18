@@ -2,6 +2,7 @@ package com.axalotl.async.mixin.entity;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -25,9 +26,9 @@ public abstract class LivingEntityMixin extends Entity {
         original.call(damageSource);
     }
 
-    @WrapMethod(method = "dropFromLootTable")
-    private synchronized void dropFromLootTable(DamageSource damageSource, boolean causedByPlayer, Operation<Void> original) {
-        original.call(damageSource, causedByPlayer);
+    @WrapMethod(method = "dropFromLootTable(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;Z)V")
+    private synchronized void dropFromLootTable(ServerLevel level, DamageSource damageSource, boolean playerKill, Operation<Void> original) {
+        original.call(level, damageSource, playerKill);
     }
 
     @WrapMethod(method = "tickEffects")

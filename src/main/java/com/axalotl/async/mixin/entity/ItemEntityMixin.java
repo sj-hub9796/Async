@@ -8,6 +8,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -29,9 +30,14 @@ public abstract class ItemEntityMixin extends Entity {
     }
 
     @Override
-    public void move(MoverType type, Vec3 movement) {
+    public void move(@NotNull MoverType type, @NotNull Vec3 movement) {
         synchronized (async$lock) {
             super.move(type, movement);
         }
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return super.canBeCollidedWith();
     }
 }

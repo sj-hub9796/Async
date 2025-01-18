@@ -1,6 +1,7 @@
 package com.axalotl.async.mixin.entity;
 
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.ai.sensing.Sensor;
@@ -23,13 +24,13 @@ public class NearestVisibleLivingEntitiesMixin {
     @Final
     private Predicate<LivingEntity> lineOfSightTest;
 
-    @Inject(method = "<init>(Lnet/minecraft/world/entity/LivingEntity;Ljava/util/List;)V", at = @At("RETURN"))
-    private void init(LivingEntity owner, List<LivingEntity> entities, CallbackInfo ci) {
-        Object2BooleanOpenHashMap<LivingEntity> object2BooleanOpenHashMap = new Object2BooleanOpenHashMap<>(entities.size());
-        Predicate<LivingEntity> predicate = target -> Sensor.isEntityTargetable(owner, target);
-        this.lineOfSightTest = entity -> {
+    @Inject(method = "<init>(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/LivingEntity;Ljava/util/List;)V", at = @At("RETURN"))
+    private void init(ServerLevel level, LivingEntity entity, List<LivingEntity> nearbyEntities, CallbackInfo ci) {
+        Object2BooleanOpenHashMap<LivingEntity> object2BooleanOpenHashMap = new Object2BooleanOpenHashMap<>(nearbyEntities.size());
+        Predicate<LivingEntity> predicate = target -> Sensor.isEntityTargetable(level, entity, target);
+        this.lineOfSightTest = entity_predicate -> {
             synchronized (object2BooleanOpenHashMap) {
-                return object2BooleanOpenHashMap.computeIfAbsent(entity, predicate);
+                return object2BooleanOpenHashMap.computeIfAbsent(entity_predicate, predicate);
             }
         };
     }
