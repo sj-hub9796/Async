@@ -14,11 +14,11 @@ import java.util.Set;
 
 @Mixin(DistanceManager.class)
 public abstract class DistanceManagerMixin {
-
     @Shadow
     @Final
     @Mutable
     Set<ChunkHolder> chunksToUpdateFutures = ConcurrentCollections.newHashSet();
+
     @Shadow
     @Final
     @Mutable

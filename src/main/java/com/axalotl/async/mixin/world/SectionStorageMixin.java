@@ -6,22 +6,30 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.storage.SectionStorage;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Mixin(SectionStorage.class)
-public abstract class SectionStorageMixin<R> implements AutoCloseable {
+public abstract class SectionStorageMixin<R, P> implements AutoCloseable {
     @Shadow
-    @Mutable
     private final Long2ObjectMap<Optional<R>> storage = new Long2ObjectConcurrentHashMap<>();
+
     @Shadow
-    @Mutable
     private final LongLinkedOpenHashSet dirtyChunks = new ConcurrentLongLinkedOpenHashSet();
+
+    @Shadow
+    private final Long2ObjectMap<CompletableFuture<Optional<SectionStorage.PackedChunk<P>>>> pendingLoads = new Long2ObjectConcurrentHashMap<>();
+
+    @Shadow
+    private final LongSet loadedChunks = new LongOpenHashSet();
 
     @WrapMethod(method = "unpackChunk(Lnet/minecraft/world/level/ChunkPos;)V")
     private synchronized void release(ChunkPos chunkPos, Operation<Void> original) {
