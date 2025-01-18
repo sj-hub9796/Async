@@ -10,6 +10,7 @@
     "entity.BeeMixin",
     "entity.CallbackMixin",
     "entity.CombatTrackerMixin",
+    "entity.CommonHooksMixin",
     "entity.DolphinMixin",
     "entity.EntityCallbacksMixin",
     "entity.EntityLookupMixin",
