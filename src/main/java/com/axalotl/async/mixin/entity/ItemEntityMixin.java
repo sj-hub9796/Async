@@ -35,9 +35,4 @@ public abstract class ItemEntityMixin extends Entity {
             super.move(type, movement);
         }
     }
-
-    @Override
-    public boolean canBeCollidedWith() {
-        return super.canBeCollidedWith();
-    }
 }
