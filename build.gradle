@@ -75,9 +75,6 @@ dependencies {
 
     compileOnly(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-common:0.2.0"))
     implementation(jarJar("com.github.bawnorton.mixinsquared:mixinsquared-neoforge:0.2.0"))
-
-    compileOnly files('./c2me-fixes-general-threading-issues-mc1.21.1-0.3.0+alpha.0.291.jar')
-    compileOnly files('./c2me-fixes-worldgen-threading-issues-mc1.21.1-0.3.0+alpha.0.291.jar')
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

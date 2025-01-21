@@ -7,7 +7,6 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.javafmlmod.FMLModContainer;
@@ -19,16 +18,12 @@ import org.slf4j.Logger;
 
 @Mod(Async.MOD_ID)
 public class Async {
-
     public static final String MOD_ID = "async";
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static Boolean c2me = false;
 
     public Async(FMLModContainer container) {
         NeoForge.EVENT_BUS.register(this);
-
         LOGGER.info("Initializing Async...");
-        c2me = ModList.get().isLoaded("c2me");
         container.registerConfig(ModConfig.Type.COMMON, AsyncConfig.SPEC, "async.toml");
         LOGGER.info("Async Initialized successfully");
     }
@@ -45,7 +40,6 @@ public class Async {
     @SubscribeEvent
     public void registerCommandsEvent(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-
         AsyncCommand.register(dispatcher, true);
     }
 

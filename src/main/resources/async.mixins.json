@@ -5,7 +5,6 @@
   "compatibilityLevel": "JAVA_21",
   "refmap": "async.refmap.json",
   "mixins": [
-    "c2me.CheckedThreadLocalRandomMixin",
     "entity.AllayMixin",
     "entity.BeeMixin",
     "entity.CallbackMixin",
