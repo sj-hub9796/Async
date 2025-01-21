@@ -30,6 +30,11 @@ public abstract class LivingEntityMixin extends Entity {
         original.call(damageSource, causedByPlayer);
     }
 
+    @WrapMethod(method = "knockback")
+    private synchronized void knockback(LivingEntity target, Operation<Void> original) {
+        original.call(target);
+    }
+
     @WrapMethod(method = "tickStatusEffects")
     private synchronized void tickStatusEffects(Operation<Void> original) {
         original.call();
