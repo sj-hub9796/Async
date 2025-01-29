@@ -11,7 +11,9 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.BlockEvent;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.world.*;
+import net.minecraft.world.MutableWorldProperties;
+import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
@@ -28,7 +30,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-@Mixin(value = ServerWorld.class, priority = 1500)
+@Mixin(value = ServerWorld.class)
 public abstract class ServerWorldMixin extends World implements StructureWorldAccess {
     @Unique
     ConcurrentLinkedQueue<BlockEvent> syncedBlockEventQueue;
@@ -47,14 +49,11 @@ public abstract class ServerWorldMixin extends World implements StructureWorldAc
         syncedBlockEventQueue = new ConcurrentLinkedQueue<>();
     }
 
-    @Inject(method = "tick", at = @At(value = "RETURN", target = "Lnet/minecraft/world/EntityList;forEach(Ljava/util/function/Consumer;)V"))
+    @Inject(method = "tick", at = @At(value = "TAIL", target = "Lnet/minecraft/world/EntityList;forEach(Ljava/util/function/Consumer;)V"))
     private void afterTickEntity(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
-        Profiler profiler = this.getProfiler();
-        profiler.push("tick");
         if ((Object) this instanceof ServerWorld) {
             ParallelProcessor.postEntityTick();
         }
-        profiler.pop();
     }
 
     @Redirect(method = "method_31420", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;tickEntity(Ljava/util/function/Consumer;Lnet/minecraft/entity/Entity;)V"))

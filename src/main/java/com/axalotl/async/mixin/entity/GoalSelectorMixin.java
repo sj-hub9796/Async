@@ -23,7 +23,6 @@ public abstract class GoalSelectorMixin {
     @Unique
     private static final ReentrantLock lock = new ReentrantLock();
 
-
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onInit(CallbackInfo ci) {
         this.goals = ConcurrentCollections.newHashSet();
