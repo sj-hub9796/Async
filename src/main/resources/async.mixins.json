@@ -35,6 +35,7 @@
     "entity.ServerEntityHandlerMixin",
     "entity.ServerEntityManagerListenerMixin",
     "entity.ServerPlayerEntityMixin",
+    "entity.TurtleEntityMixin",
     "entity.VillagerEntityMixin",
     "entity.VillagerGossipsMixin",
     "server.MinecraftServerMixin",
