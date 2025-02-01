@@ -39,6 +39,7 @@ public abstract class ServerChunkManagerMixin extends ChunkManager {
                 if (chunk instanceof WrapperProtoChunk readOnlyChunk) chunk = readOnlyChunk.getWrappedChunk();
                 if (chunk != null) {
                     cir.setReturnValue(chunk);
+                    return;
                 }
             }
         }
@@ -53,6 +54,7 @@ public abstract class ServerChunkManagerMixin extends ChunkManager {
                 Chunk chunk = future.getNow(ChunkHolder.UNLOADED).orElse(null);
                 if (chunk instanceof WorldChunk worldChunk) {
                     cir.setReturnValue(worldChunk);
+                    return;
                 }
             }
         }
