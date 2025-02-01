@@ -16,6 +16,8 @@ public abstract class EntityMixin {
     @Unique
     private static final ReentrantLock lock = new ReentrantLock();
 
+
+
     @WrapMethod(method = "move")
     private void move(MovementType movementType, Vec3d movement, Operation<Void> original) {
         if (AsyncConfig.enableEntityMoveSync) {

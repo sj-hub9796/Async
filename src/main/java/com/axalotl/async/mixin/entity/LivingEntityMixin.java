@@ -43,6 +43,13 @@ public abstract class LivingEntityMixin extends Entity {
         }
     }
 
+    @WrapMethod(method = "updateAttributes")
+    private void updateAttributes(Operation<Void> original) {
+        synchronized (lock) {
+            original.call();
+        }
+    }
+
     @WrapMethod(method = "tickStatusEffects")
     private synchronized void tickStatusEffects(Operation<Void> original) {
         synchronized (lock) {

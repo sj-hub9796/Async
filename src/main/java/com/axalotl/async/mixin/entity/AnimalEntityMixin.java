@@ -11,41 +11,45 @@ import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @Mixin(AnimalEntity.class)
 public abstract class AnimalEntityMixin extends Entity {
+    @Unique
+    private final AtomicBoolean breedingFlag = new AtomicBoolean(false);
+    @Unique
+    private final AtomicBoolean breedingBabyFlag = new AtomicBoolean(false);
 
     public AnimalEntityMixin(EntityType<?> type, World world) {
         super(type, world);
     }
 
-    /**
-     * Utility method to acquire a consistent lock ordering for two animals.
-     */
-    @Unique
-    private static Object[] getOrderedLocks(AnimalEntity a, AnimalEntity b) {
-        if (System.identityHashCode(a) <= System.identityHashCode(b)) {
-            return new Object[]{a, b};
-        } else {
-            return new Object[]{b, a};
+    @WrapMethod(method = "breed(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/passive/AnimalEntity;)V")
+    private void breed(ServerWorld world, AnimalEntity other, Operation<Void> original) {
+        if (this.getId() > other.getId()) {
+            return;
+        }
+        AnimalEntityMixin otherMixin = (AnimalEntityMixin) (Object) other;
+        if (this.breedingFlag.compareAndSet(false, true) && otherMixin.breedingFlag.compareAndSet(false, true)) {
+            try {
+                original.call(world, other);
+            } finally {
+                this.breedingFlag.set(false);
+                otherMixin.breedingFlag.set(false);
+            }
         }
     }
 
     @WrapMethod(method = "breed(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/passive/AnimalEntity;Lnet/minecraft/entity/passive/PassiveEntity;)V")
     private void breed(ServerWorld world, AnimalEntity other, PassiveEntity baby, Operation<Void> original) {
-        Object[] locks = getOrderedLocks((AnimalEntity)(Object)this, other);
-        synchronized (locks[0]) {
-            synchronized (locks[1]) {
+        if (this.getId() > other.getId()) return;
+        AnimalEntityMixin otherMixin = (AnimalEntityMixin) (Object) other;
+        if (this.breedingBabyFlag.compareAndSet(false, true) && otherMixin.breedingBabyFlag.compareAndSet(false, true)) {
+            try {
                 original.call(world, other, baby);
-            }
-        }
-    }
-
-    @WrapMethod(method = "breed(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/entity/passive/AnimalEntity;)V")
-    private void breed(ServerWorld world, AnimalEntity other, Operation<Void> original) {
-        Object[] locks = getOrderedLocks((AnimalEntity)(Object)this, other);
-        synchronized (locks[0]) {
-            synchronized (locks[1]) {
-                original.call(world, other);
+            } finally {
+                this.breedingBabyFlag.set(false);
+                otherMixin.breedingBabyFlag.set(false);
             }
         }
     }
