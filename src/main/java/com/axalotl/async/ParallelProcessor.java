@@ -65,15 +65,19 @@ public class ParallelProcessor {
         if (shouldTickSynchronously(entity)) {
             tickSynchronously(tickConsumer, entity);
         } else {
-            tickPool.schedule(() -> {
-                try {
-                    performAsyncEntityTick(tickConsumer, entity);
-                } catch (Exception e) {
-                    logEntityError("Error in async tick, switching to synchronous", entity, e);
-                    tickSynchronously(tickConsumer, entity);
-                    blacklistedEntity.add(entity.getUuid());
-                }
-            }, 1);
+            if (tickPool != null) {
+                tickPool.schedule(() -> {
+                    try {
+                        performAsyncEntityTick(tickConsumer, entity);
+                    } catch (Exception e) {
+                        logEntityError("Error in async tick, switching to synchronous", entity, e);
+                        tickSynchronously(tickConsumer, entity);
+                        blacklistedEntity.add(entity.getUuid());
+                    }
+                }, 1);
+            } else {
+                tickSynchronously(tickConsumer, entity);
+            }
         }
     }
 
