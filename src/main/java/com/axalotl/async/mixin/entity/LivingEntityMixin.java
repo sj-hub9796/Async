@@ -18,7 +18,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 @Mixin(value = LivingEntity.class, priority = 1001)
 public abstract class LivingEntityMixin extends Entity {
-
     @Unique
     private static final ReentrantLock lock = new ReentrantLock();
 
@@ -40,13 +39,6 @@ public abstract class LivingEntityMixin extends Entity {
     private void knockback(LivingEntity target, Operation<Void> original) {
         synchronized (lock) {
             original.call(target);
-        }
-    }
-
-    @WrapMethod(method = "updateAttributes")
-    private void updateAttributes(Operation<Void> original) {
-        synchronized (lock) {
-            original.call();
         }
     }
 

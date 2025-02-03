@@ -15,14 +15,14 @@ public class ServerEntityHandlerMixin {
     private static final ReentrantLock lock = new ReentrantLock();
 
     @WrapMethod(method = "startTicking(Lnet/minecraft/entity/Entity;)V")
-    private synchronized void startTicking(Entity entity, Operation<Void> original) {
+    private void startTicking(Entity entity, Operation<Void> original) {
         synchronized (lock) {
             original.call(entity);
         }
     }
 
     @WrapMethod(method = "stopTicking(Lnet/minecraft/entity/Entity;)V")
-    private synchronized void stopTicking(Entity entity, Operation<Void> original) {
+    private void stopTicking(Entity entity, Operation<Void> original) {
         synchronized (lock) {
             original.call(entity);
         }

@@ -24,7 +24,6 @@ public class Async implements ModInitializer {
             ParallelProcessor.setupThreadPool(AsyncConfig.getParallelism());
         });
 
-
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> AsyncCommand.register(dispatcher));
 
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
