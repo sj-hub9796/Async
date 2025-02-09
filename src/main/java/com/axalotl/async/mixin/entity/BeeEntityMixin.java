@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @Mixin(BeeEntity.class)
 public class BeeEntityMixin{
     @Unique
-    private static final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
 
     @WrapMethod(method = "canEnterHive")
     private boolean loot(Operation<Boolean> original) {

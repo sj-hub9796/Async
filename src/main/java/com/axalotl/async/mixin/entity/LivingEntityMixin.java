@@ -19,7 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @Mixin(value = LivingEntity.class, priority = 1001)
 public abstract class LivingEntityMixin extends Entity {
     @Unique
-    private static final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
 
     public LivingEntityMixin(EntityType<?> type, World world) {
         super(type, world);

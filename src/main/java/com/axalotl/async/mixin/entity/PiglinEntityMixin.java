@@ -12,12 +12,12 @@ import java.util.concurrent.locks.ReentrantLock;
 @Mixin(PiglinEntity.class)
 public class PiglinEntityMixin {
     @Unique
-    private static final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
 
     @WrapMethod(method = "loot")
     private void loot(ItemEntity item, Operation<Void> original) {
         synchronized (lock) {
-            if (!item.isRemoved() && item.getEntityWorld() != null) {
+            if (!item.isRemoved()) {
                 original.call(item);
             }
         }
