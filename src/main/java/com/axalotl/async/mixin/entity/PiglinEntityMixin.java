@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @Mixin(PiglinEntity.class)
 public class PiglinEntityMixin {
     @Unique
-    private final ReentrantLock lock = new ReentrantLock();
+    private static final ReentrantLock lock = new ReentrantLock();
 
     @WrapMethod(method = "loot")
     private void loot(ItemEntity item, Operation<Void> original) {
