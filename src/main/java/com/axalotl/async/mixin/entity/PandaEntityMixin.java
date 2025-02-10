@@ -17,7 +17,7 @@ public class PandaEntityMixin {
     @WrapMethod(method = "loot")
     private void loot(ItemEntity item, Operation<Void> original) {
         synchronized (lock) {
-            if (!item.isRemoved() && item.getEntityWorld() != null) {
+            if (!item.isRemoved()) {
                 original.call(item);
             }
         }
