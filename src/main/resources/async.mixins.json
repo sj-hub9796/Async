@@ -25,6 +25,7 @@
     "entity.NearestItemsSensorMixin",
     "entity.NearestLivingEntitiesSensorMixin",
     "entity.NearestPlayersSensorMixin",
+    "entity.OpenDoorsTaskMixin",
     "entity.PandaEntityMixin",
     "entity.PathNodeNavigatorMixin",
     "entity.PiglinEntityMixin",
