@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class ParallelProcessor {
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger(ParallelProcessor.class);
 
     @Getter
     @Setter
@@ -67,21 +67,21 @@ public class ParallelProcessor {
 
     public static void callEntityTick(Consumer<Entity> tickConsumer, Entity entity) {
         if (shouldTickSynchronously(entity)) {
-            tickSynchronously(tickConsumer, entity);
+            server.execute(() -> tickSynchronously(tickConsumer, entity));
         } else {
             if (!tickPool.isShutdown() && !tickPool.isTerminated()) {
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() ->
                         performAsyncEntityTick(tickConsumer, entity), tickPool
                 ).exceptionally(e -> {
                     logEntityError("Error in async tick, switching to synchronous", entity, e);
-                    tickSynchronously(tickConsumer, entity);
+                    server.execute(() -> tickSynchronously(tickConsumer, entity));
                     blacklistedEntity.add(entity.getUuid());
                     return null;
                 });
                 taskQueue.offer(future);
             } else {
                 logEntityError("Rejected task due to ExecutorService shutdown", entity, null);
-                tickSynchronously(tickConsumer, entity);
+                server.execute(() -> tickSynchronously(tickConsumer, entity));
             }
         }
     }
@@ -138,10 +138,10 @@ public class ParallelProcessor {
                     return null;
                 });
 
-                server.getWorlds().forEach(world -> {
+                server.execute(() -> server.getWorlds().forEach(world -> {
                     world.getChunkManager().executeQueuedTasks();
                     world.getChunkManager().mainThreadExecutor.runTasks(allTasks::isDone);
-                });
+                }));
 
             } catch (CompletionException e) {
                 LOGGER.error("Critical error during entity tick processing", e);
