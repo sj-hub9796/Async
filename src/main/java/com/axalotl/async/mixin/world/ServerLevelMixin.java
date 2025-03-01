@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-@Mixin(value = ServerLevel.class)
+@Mixin(value = ServerLevel.class, priority = 1500)
 public abstract class ServerLevelMixin implements WorldGenLevel {
     @Unique
     ConcurrentLinkedQueue<BlockEventData> async$syncedBlockEventQueue;
@@ -36,7 +36,7 @@ public abstract class ServerLevelMixin implements WorldGenLevel {
         async$syncedBlockEventQueue = new ConcurrentLinkedQueue<>();
     }
 
-    @Redirect(method = {"lambda$tick$2", "m_304414_"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;guardEntityTick(Ljava/util/function/Consumer;Lnet/minecraft/world/entity/Entity;)V"))
+    @Redirect(method = {"lambda$tick$2"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;guardEntityTick(Ljava/util/function/Consumer;Lnet/minecraft/world/entity/Entity;)V"))
     private void overwriteEntityTicking(ServerLevel instance, Consumer<Entity> consumer, Entity entity) {
         ParallelProcessor.callEntityTick(consumer, entity);
     }

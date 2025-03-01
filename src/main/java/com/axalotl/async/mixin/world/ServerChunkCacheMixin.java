@@ -45,6 +45,7 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
                 if (chunk instanceof ImposterProtoChunk readOnlyChunk) chunk = readOnlyChunk.getWrapped();
                 if (chunk != null) {
                     cir.setReturnValue(chunk);
+                    return;
                 }
             }
         }
@@ -59,6 +60,7 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
                 ChunkAccess chunk = future.getNow(ChunkHolder.UNLOADED_CHUNK).orElse(null);
                 if (chunk instanceof LevelChunk worldChunk) {
                     cir.setReturnValue(worldChunk);
+                    return;
                 }
             }
         }

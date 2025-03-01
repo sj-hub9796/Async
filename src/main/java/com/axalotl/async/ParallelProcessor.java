@@ -25,15 +25,15 @@ public class ParallelProcessor {
 
     @Getter
     @Setter
-    private static MinecraftServer server;
+    public static MinecraftServer server;
 
-    public static final AtomicInteger currentEntities = new AtomicInteger();
-    private static final AtomicInteger threadPoolID = new AtomicInteger();
+    public static AtomicInteger currentEntities = new AtomicInteger();
+    private static final AtomicInteger ThreadPoolID = new AtomicInteger();
     private static ExecutorService tickPool;
     private static final Queue<CompletableFuture<Void>> taskQueue = new ConcurrentLinkedQueue<>();
-    private static final Set<UUID> blacklistedEntity = ConcurrentHashMap.newKeySet();
+    public static final Set<UUID> blacklistedEntity = ConcurrentHashMap.newKeySet();
     private static final Map<String, Set<Thread>> mcThreadTracker = ConcurrentCollections.newHashMap();
-    private static final Set<Class<?>> specialEntities = Set.of(
+    public static final Set<Class<?>> specialEntities = Set.of(
             FallingBlockEntity.class,
             Player.class,
             ServerPlayer.class
@@ -42,9 +42,10 @@ public class ParallelProcessor {
     public static void setupThreadPool(int parallelism) {
         ForkJoinPool.ForkJoinWorkerThreadFactory threadFactory = pool -> {
             ForkJoinWorkerThread worker = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
-            worker.setName("Async-Tick-Pool-Thread-" + threadPoolID.getAndIncrement());
+            worker.setName("Async-Tick-Pool-Thread-" + ThreadPoolID.getAndIncrement());
             registerThread("Async-Tick", worker);
             worker.setDaemon(true);
+            worker.setPriority(Thread.NORM_PRIORITY);
             worker.setContextClassLoader(Async.class.getClassLoader());
             return worker;
         };
@@ -55,64 +56,63 @@ public class ParallelProcessor {
     }
 
     public static void registerThread(String poolName, Thread thread) {
-        mcThreadTracker.computeIfAbsent(poolName, key -> ConcurrentHashMap.newKeySet()).add(thread);
+        mcThreadTracker.computeIfAbsent(poolName, s -> ConcurrentHashMap.newKeySet()).add(thread);
     }
 
-    private static boolean isThreadInPool(Thread thread) {
-        return mcThreadTracker.getOrDefault("Async-Tick", Set.of()).contains(thread);
+    public static boolean isThreadPooled(String poolName, Thread t) {
+        return mcThreadTracker.containsKey(poolName) && mcThreadTracker.get(poolName).contains(t);
     }
 
-    public static boolean isServerExecutionThread() {
-        return isThreadInPool(Thread.currentThread());
+    public static boolean serverExecutionThreadPatch() {
+        return isThreadPooled("Async-Tick", Thread.currentThread());
     }
 
     public static void callEntityTick(Consumer<Entity> tickConsumer, Entity entity) {
         if (shouldTickSynchronously(entity)) {
             tickSynchronously(tickConsumer, entity);
         } else {
-            if (!tickPool.isShutdown() && !tickPool.isTerminated()) {
-                CompletableFuture<Void> future = CompletableFuture.runAsync(() ->
-                        performAsyncEntityTick(tickConsumer, entity), tickPool
-                ).exceptionally(e -> {
-                    logEntityError("Error in async tick, switching to synchronous", entity, e);
-                    tickSynchronously(tickConsumer, entity);
-                    blacklistedEntity.add(entity.getUUID());
-                    return null;
-                });
-                taskQueue.add(future);
-            } else {
-                logEntityError("Rejected task due to ExecutorService shutdown", entity, null);
+            CompletableFuture<Void> future = CompletableFuture.runAsync(
+                    () -> performAsyncEntityTick(tickConsumer, entity),
+                    tickPool
+            ).exceptionally(e -> {
+                logEntityError("Error ticking asynchronously, switching to synchronous processing", entity, e);
                 tickSynchronously(tickConsumer, entity);
-            }
+                blacklistedEntity.add(entity.getUUID());
+                return null;
+            });
+            taskQueue.add(future);
         }
     }
 
     public static boolean shouldTickSynchronously(Entity entity) {
-        return AsyncConfig.disabled ||
-                blacklistedEntity.contains(entity.getUUID()) ||
-                specialEntities.contains(entity.getClass()) ||
-                AsyncConfig.synchronizedEntities.contains(EntityType.getKey(entity.getType())) ||
-                isPortalTickRequired(entity) ||
-                entity.hasExactlyOnePlayerPassenger() ||
-                entity instanceof Projectile ||
-                entity instanceof AbstractMinecart;
+        return AsyncConfig.disabled
+                || entity instanceof Projectile
+                || entity instanceof AbstractMinecart
+                || tickPortalSynchronously(entity)
+                || entity.hasExactlyOnePlayerPassenger()
+                || AsyncConfig.synchronizedEntities.contains(EntityType.getKey(entity.getType()))
+                || blacklistedEntity.contains(entity.getUUID())
+                || specialEntities.contains(entity.getClass());
     }
 
-    private static boolean isPortalTickRequired(Entity entity) {
-        return entity.portalProcess != null && entity.portalProcess.isInsidePortalThisTick();
+    private static boolean tickPortalSynchronously(Entity entity) {
+        if (entity.portalProcess != null && entity.portalProcess.isInsidePortalThisTick()) {
+            return true;
+        }
+        return entity instanceof Projectile;
     }
 
     private static void tickSynchronously(Consumer<Entity> tickConsumer, Entity entity) {
         try {
             tickConsumer.accept(entity);
         } catch (Exception e) {
-            logEntityError("Error during synchronous tick", entity, e);
+            logEntityError("Error ticking synchronously", entity, e);
         }
     }
 
     private static void performAsyncEntityTick(Consumer<Entity> tickConsumer, Entity entity) {
-        currentEntities.incrementAndGet();
         try {
+            currentEntities.incrementAndGet();
             tickConsumer.accept(entity);
         } finally {
             currentEntities.decrementAndGet();
@@ -123,49 +123,37 @@ public class ParallelProcessor {
         if (!AsyncConfig.disabled) {
             try {
                 List<CompletableFuture<Void>> futuresList = new ArrayList<>(taskQueue);
-                taskQueue.clear();
-
-                if (futuresList.isEmpty()) {
-                    return;
-                }
-
-                CompletableFuture<Void> allTasks = CompletableFuture.allOf(
-                        futuresList.toArray(new CompletableFuture[0])
-                );
-
-                allTasks.orTimeout(60, TimeUnit.SECONDS).exceptionally(ex -> {
+                CompletableFuture<Void> allTasks = CompletableFuture.allOf(futuresList.toArray(new CompletableFuture[0]));
+                allTasks.orTimeout(120, TimeUnit.SECONDS).exceptionally(ex -> {
                     LOGGER.error("Timeout during entity tick processing", ex);
                     server.stopServer();
                     return null;
                 });
-
                 server.getAllLevels().forEach(world -> {
                     world.getChunkSource().pollTask();
                     world.getChunkSource().mainThreadProcessor.managedBlock(allTasks::isDone);
                 });
-
             } catch (CompletionException e) {
                 LOGGER.error("Critical error during entity tick processing", e);
                 server.stopServer();
+            } finally {
+                taskQueue.clear();
             }
         }
     }
 
     public static void stop() {
-        if (tickPool != null && !tickPool.isShutdown()) {
-            tickPool.shutdown();
-            try {
-                if (!tickPool.awaitTermination(10, TimeUnit.SECONDS)) {
-                    tickPool.shutdownNow();
-                }
-            } catch (InterruptedException e) {
+        tickPool.shutdown();
+        try {
+            if (!tickPool.awaitTermination(10, TimeUnit.SECONDS)) {
                 tickPool.shutdownNow();
-                Thread.currentThread().interrupt();
             }
+        } catch (InterruptedException e) {
+            tickPool.shutdownNow();
         }
     }
 
     private static void logEntityError(String message, Entity entity, Throwable e) {
-        LOGGER.error("{} Entity Type: {}, UUID: {}", message, entity.getName(), entity.getUUID(), e);
+        LOGGER.error("{} Entity Type: {}, UUID: {}", message, entity.getType().getDescription(), entity.getUUID(), e);
     }
 }
