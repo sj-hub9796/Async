@@ -1,5 +1,7 @@
 package com.axalotl.async.mixin.world;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ChunkResult;
@@ -45,6 +47,7 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
                 if (chunk instanceof ImposterProtoChunk readOnlyChunk) chunk = readOnlyChunk.getWrapped();
                 if (chunk != null) {
                     cir.setReturnValue(chunk);
+                    return;
                 }
             }
         }
@@ -59,8 +62,14 @@ public abstract class ServerChunkCacheMixin extends ChunkSource {
                 ChunkAccess chunk = future.getNow(ChunkHolder.UNLOADED_CHUNK).orElse(null);
                 if (chunk instanceof LevelChunk worldChunk) {
                     cir.setReturnValue(worldChunk);
+                    return;
                 }
             }
         }
+    }
+
+    @WrapMethod(method = "storeInCache")
+    private synchronized void syncPutInCache(long pos, ChunkAccess chunk, ChunkStatus status, Operation<Void> original) {
+        original.call(pos, chunk, status);
     }
 }

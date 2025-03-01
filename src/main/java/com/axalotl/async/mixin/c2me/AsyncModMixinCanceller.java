@@ -1,7 +1,6 @@
 package com.axalotl.async.mixin.c2me;
 
 import com.bawnorton.mixinsquared.api.MixinCanceller;
-import net.neoforged.fml.ModList;
 
 import java.util.List;
 
