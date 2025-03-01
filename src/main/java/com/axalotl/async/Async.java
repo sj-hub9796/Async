@@ -22,16 +22,18 @@ public class Async {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public Async(FMLModContainer container) {
-        NeoForge.EVENT_BUS.register(this);
         LOGGER.info("Initializing Async...");
+        NeoForge.EVENT_BUS.register(this);
+        LOGGER.info("Initializing Async Config...");
         container.registerConfig(ModConfig.Type.COMMON, AsyncConfig.SPEC, "async.toml");
         LOGGER.info("Async Initialized successfully");
     }
 
+
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("Async Setting up thread-pool...");
-        AsyncConfig.castConfig();
+        AsyncConfig.loadConfig();
         StatsCommand.runStatsThread();
         ParallelProcessor.setServer(event.getServer());
         ParallelProcessor.setupThreadPool(AsyncConfig.getParallelism());

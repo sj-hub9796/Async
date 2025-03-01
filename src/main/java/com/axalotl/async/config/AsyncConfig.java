@@ -31,7 +31,7 @@ public class AsyncConfig {
     private static final ModConfigSpec.ConfigValue<List<String>> synchronizedEntitiesv;
 
     static {
-        BUILDER.push("Async Configs");
+        BUILDER.push("Async Config");
 
         disabledv = BUILDER.comment("Globally disable all toggleable functionality within the async system. Set to true to stop all asynchronous operations.")
                 .define("disabled", false);
@@ -50,7 +50,7 @@ public class AsyncConfig {
         LOGGER.info("Configuration successfully loaded.");
     }
 
-    public static void castConfig() {
+    public static void loadConfig() {
         disabled = disabledv.get();
         paraMax = paraMaxv.get();
         synchronizedEntities = new HashSet<>();
@@ -67,7 +67,6 @@ public class AsyncConfig {
                 Objects.requireNonNull(ResourceLocation.tryBuild("minecraft", "experience_orb"))
         )));
         enableEntityMoveSync = enableEntityMoveSyncv.get();
-        LOGGER.info("Config Casted");
     }
 
     public static void saveConfig() {

@@ -30,7 +30,6 @@ public class ConfigCommand {
                     return 1;
                 }))
                 .then(literal("synchronizedEntities")
-
                         .requires(cmdSrc -> cmdSrc.hasPermission(4))
                         .executes(cmdCtx -> {
                             Set<ResourceLocation> currentValue = AsyncConfig.synchronizedEntities;
