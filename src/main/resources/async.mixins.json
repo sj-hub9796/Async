@@ -6,6 +6,7 @@
   "refmap": "async.refmap.json",
   "mixins": [
     "entity.AllayMixin",
+    "entity.AnimalMakeLove",
     "entity.AnimalMixin",
     "entity.BeehiveBlockEntityBeeMixin",
     "entity.BeeMixin",
