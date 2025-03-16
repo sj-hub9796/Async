@@ -9,12 +9,12 @@ import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.BlockEvent;
+import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.world.MutableWorldProperties;
-import net.minecraft.world.StructureWorldAccess;
-import net.minecraft.world.World;
+import net.minecraft.world.*;
 import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.tick.TickManager;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,10 +33,28 @@ import java.util.function.Supplier;
 public abstract class ServerWorldMixin extends World implements StructureWorldAccess {
     @Unique
     ConcurrentLinkedQueue<BlockEvent> syncedBlockEventQueue;
+
     @Shadow
     @Final
     @Mutable
     Set<MobEntity> loadedMobs;
+
+    @Shadow
+    public abstract TickManager getTickManager();
+
+    @Shadow
+    @Final
+    private ServerChunkManager chunkManager;
+
+    @Shadow
+    public abstract void tickEntity(Entity entity);
+
+    @Shadow
+    @Final
+    public EntityList entityList;
+
+    @Shadow
+    protected abstract boolean shouldCancelSpawn(Entity entity);
 
     protected ServerWorldMixin(MutableWorldProperties properties, RegistryKey<World> registryRef, DynamicRegistryManager registryManager, RegistryEntry<DimensionType> dimensionEntry, Supplier<Profiler> profiler, boolean isClient, boolean debugWorld, long biomeAccess, int maxChainedNeighborUpdates) {
         super(properties, registryRef, registryManager, dimensionEntry, profiler, isClient, debugWorld, biomeAccess, maxChainedNeighborUpdates);
@@ -48,9 +66,35 @@ public abstract class ServerWorldMixin extends World implements StructureWorldAc
         syncedBlockEventQueue = new ConcurrentLinkedQueue<>();
     }
 
-    @Redirect(method = "method_31420", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;tickEntity(Ljava/util/function/Consumer;Lnet/minecraft/entity/Entity;)V"))
-    private void overwriteEntityTicking(ServerWorld instance, Consumer<Entity> consumer, Entity entity) {
-        ParallelProcessor.callEntityTick(consumer, entity);
+    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/EntityList;forEach(Ljava/util/function/Consumer;)V"))
+    private void overwriteEntityTicking(EntityList entityList, Consumer<Entity> action) {
+        Profiler profiler = this.getProfiler();
+        this.entityList.forEach(entity -> {
+            if (!entity.isRemoved()) {
+                if (this.shouldCancelSpawn(entity)) {
+                    entity.discard();
+                } else if (!this.getTickManager().shouldSkipTick(entity)) {
+                    profiler.push("checkDespawn");
+                    entity.checkDespawn();
+                    profiler.pop();
+                    if (this.chunkManager.chunkLoadingManager.getTicketManager().shouldTickEntities(entity.getChunkPos().toLong())) {
+                        Entity entity2 = entity.getVehicle();
+                        if (entity2 != null) {
+                            if (!entity2.isRemoved() && entity2.hasPassenger(entity)) {
+                                return;
+                            }
+                            entity.stopRiding();
+                        }
+                        profiler.push("tick");
+                        ParallelProcessor.callEntityTick(this::tickEntity, entity);
+                        profiler.pop();
+                    }
+                }
+            }
+        });
+        profiler.push("tick");
+        ParallelProcessor.postEntityTick();
+        profiler.pop();
     }
 
     @Redirect(

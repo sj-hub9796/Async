@@ -11,4 +11,3 @@ public class AsyncModMixinCanceller implements MixinCanceller {
                 mixinClassName.equals("com.ishland.c2me.fixes.worldgen.threading_issues.mixin.threading_detections.random_instances.MixinWorld");
     }
 }
-
