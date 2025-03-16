@@ -32,6 +32,6 @@ public class Async implements ModInitializer {
             StatsCommand.shutdown();
         });
 
-        LOGGER.info("Async Initialized successfully");
+        LOGGER.info("Async Initialized successfully!");
     }
 }

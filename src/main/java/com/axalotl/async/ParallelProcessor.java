@@ -5,11 +5,13 @@ import com.axalotl.async.parallelised.ConcurrentCollections;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.entity.*;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.vehicle.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.world.SpawnHelper;
+import net.minecraft.world.chunk.WorldChunk;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -28,13 +30,12 @@ public class ParallelProcessor {
     public static final AtomicInteger currentEntities = new AtomicInteger();
     private static final AtomicInteger threadPoolID = new AtomicInteger();
     private static ExecutorService tickPool;
-    private static final Queue<CompletableFuture<Void>> taskQueue = new ConcurrentLinkedQueue<>();
+    private static final Queue<CompletableFuture<?>> taskQueue = new ConcurrentLinkedQueue<>();
     private static final Set<UUID> blacklistedEntity = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<UUID, Integer> portalTickSyncMap = new ConcurrentHashMap<>();
     private static final Map<String, Set<Thread>> mcThreadTracker = ConcurrentCollections.newHashMap();
     private static final Set<Class<?>> specialEntities = Set.of(
-            FallingBlockEntity.class,
-            PlayerEntity.class,
-            ServerPlayerEntity.class
+            FallingBlockEntity.class
     );
 
     public static void setupThreadPool(int parallelism) {
@@ -66,6 +67,7 @@ public class ParallelProcessor {
     }
 
     public static void callEntityTick(Consumer<Entity> tickConsumer, Entity entity) {
+
         if (shouldTickSynchronously(entity)) {
             tickSynchronously(tickConsumer, entity);
         } else {
@@ -87,15 +89,34 @@ public class ParallelProcessor {
     }
 
     public static boolean shouldTickSynchronously(Entity entity) {
-        return AsyncConfig.disabled ||
+        UUID entityId = entity.getUuid();
+        boolean requiresSyncTick = AsyncConfig.disabled ||
                 entity instanceof ProjectileEntity ||
                 entity instanceof AbstractMinecartEntity ||
+                entity instanceof ServerPlayerEntity ||
                 specialEntities.contains(entity.getClass()) ||
-                blacklistedEntity.contains(entity.getUuid()) ||
+                blacklistedEntity.contains(entityId) ||
                 AsyncConfig.synchronizedEntities.contains(EntityType.getId(entity.getType())) ||
-                isPortalTickRequired(entity) ||
                 entity.hasPlayerRider();
+        if (requiresSyncTick) {
+            return true;
+        }
+        if (portalTickSyncMap.containsKey(entityId)) {
+            int ticksLeft = portalTickSyncMap.get(entityId);
+            if (ticksLeft > 0) {
+                portalTickSyncMap.put(entityId, ticksLeft - 1);
+                return true;
+            } else {
+                portalTickSyncMap.remove(entityId);
+            }
+        }
+        if (isPortalTickRequired(entity)) {
+            portalTickSyncMap.put(entityId, 39);
+            return true;
+        }
+        return false;
     }
+
 
     private static boolean isPortalTickRequired(Entity entity) {
         return entity.portalManager != null && entity.portalManager.isInPortal();
@@ -118,17 +139,32 @@ public class ParallelProcessor {
         }
     }
 
+    public static void asyncSpawn(ServerWorld world, WorldChunk worldChunk, SpawnHelper.Info info, List<SpawnGroup> spawnableGroups) {
+        if (AsyncConfig.enableAsyncSpawn) {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() ->
+                    SpawnHelper.spawn(world, worldChunk, info, spawnableGroups), tickPool
+            ).exceptionally(e -> {
+                LOGGER.error("Error in async spawn tick, switching to synchronous", e);
+                SpawnHelper.spawn(world, worldChunk, info, spawnableGroups);
+                return null;
+            });
+            taskQueue.add(future);
+        } else {
+            SpawnHelper.spawn(world, worldChunk, info, spawnableGroups);
+        }
+    }
+
     public static void postEntityTick() {
         if (!AsyncConfig.disabled) {
             try {
-                List<CompletableFuture<Void>> futuresList = new ArrayList<>(taskQueue);
+                List<CompletableFuture<?>> futuresList = new ArrayList<>(taskQueue);
                 taskQueue.clear();
 
                 if (futuresList.isEmpty()) {
                     return;
                 }
 
-                CompletableFuture<Void> allTasks = CompletableFuture.allOf(
+                CompletableFuture<?> allTasks = CompletableFuture.allOf(
                         futuresList.toArray(new CompletableFuture[0])
                 );
 

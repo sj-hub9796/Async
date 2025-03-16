@@ -18,10 +18,10 @@ import java.util.function.Function;
 
 @Mixin(Raid.class)
 public class RaidMixin {
-    @Unique
-    private static final ReentrantLock lock = new ReentrantLock();
     @Shadow
     private final Map<Integer, Set<RaiderEntity>> waveToRaiders = ConcurrentCollections.newHashMap();
+    @Unique
+    private static final ReentrantLock lock = new ReentrantLock();
 
     @WrapMethod(method = "addToWave(ILnet/minecraft/entity/raid/RaiderEntity;)Z")
     private boolean addToWave(int wave, RaiderEntity entity, Operation<Boolean> original) {

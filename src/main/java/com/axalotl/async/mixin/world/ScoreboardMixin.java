@@ -11,5 +11,5 @@ import java.util.Map;
 @Mixin(Scoreboard.class)
 public class ScoreboardMixin {
     @Shadow
-    private final  Map<String, Scores> scores = ConcurrentCollections.newHashMap();
+    private final Map<String, Scores> scores = ConcurrentCollections.newHashMap();
 }
