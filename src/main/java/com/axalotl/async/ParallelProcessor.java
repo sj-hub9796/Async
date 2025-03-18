@@ -172,7 +172,6 @@ public class ParallelProcessor {
                     LOGGER.error("Timeout during entity tick processing", ex);
                     server.shutdown();
                     return null;
-
                 });
 
                 server.getWorlds().forEach(world -> {
