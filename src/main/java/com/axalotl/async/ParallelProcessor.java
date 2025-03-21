@@ -67,7 +67,6 @@ public class ParallelProcessor {
     }
 
     public static void callEntityTick(Consumer<Entity> tickConsumer, Entity entity) {
-
         if (shouldTickSynchronously(entity)) {
             tickSynchronously(tickConsumer, entity);
         } else {
